@@ -50,6 +50,8 @@ struct _GstVP9Enc
 #ifdef VPX_CTRL_VP9E_SET_ROW_MT
   gboolean row_mt;
 #endif
+  guint aq_mode;
+  gboolean enable_tpl;
 };
 
 G_END_DECLS

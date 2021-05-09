@@ -72,6 +72,8 @@ GST_DEBUG_CATEGORY_STATIC (gst_vp9enc_debug);
 #define DEFAULT_TILE_COLUMNS 6
 #define DEFAULT_TILE_ROWS 0
 #define DEFAULT_ROW_MT 0
+#define DEFAULT_AQ_MODE 0
+#define DEFAULT_ENABLE_TPL 1 
 
 enum
 {
@@ -79,6 +81,8 @@ enum
   PROP_TILE_COLUMNS,
   PROP_TILE_ROWS,
   PROP_ROW_MT,
+  PROP_AQ_MODE,
+  PROP_ENABLE_TPL,
 };
 
 /* FIXME: Y42B do not work yet it seems */
@@ -175,6 +179,18 @@ gst_vp9_enc_class_init (GstVP9EncClass * klass)
       g_param_spec_boolean ("row-mt", "Row Multithreading",
           "Whether each row should be encoded using multiple threads",
           DEFAULT_ROW_MT,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+
+  g_object_class_install_property (gobject_class, PROP_AQ_MODE,
+      g_param_spec_int ("aq-mode", "Adaptive Quantization Mode",
+          "Adaptive quantization mode (0: off (default), 1: variance 2: complexity, 3: cyclic refresh, 4: equator360)",
+          0, 4, DEFAULT_AQ_MODE,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+
+  g_object_class_install_property (gobject_class, PROP_ENABLE_TPL,
+      g_param_spec_boolean ("enable-tpl", "Temporal Dependency Model",
+          "Enabling temporal dependency model might give a better video quality",
+          DEFAULT_ENABLE_TPL,
           (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   gst_element_class_add_static_pad_template (element_class,
@@ -276,6 +292,30 @@ gst_vp9_enc_set_property (GObject * object, guint prop_id,
         }
       }
       break;
+    case PROP_AQ_MODE:
+      gst_vp9_enc->aq_mode = g_value_get_int (value);
+      if (gst_vpx_enc->inited) {
+        status =
+            vpx_codec_control (&gst_vpx_enc->encoder, VP9E_SET_AQ_MODE,
+            gst_vp9_enc->aq_mode);
+        if (status != VPX_CODEC_OK) {
+          GST_WARNING_OBJECT (gst_vpx_enc,
+              "Failed to set VP9E_SET_AQ_MODE: %s", gst_vpx_error_name (status));
+        }
+      }
+      break;
+    case PROP_ENABLE_TPL:
+      gst_vp9_enc->enable_tpl = g_value_get_boolean (value);
+      if (gst_vpx_enc->inited) {
+        status =
+            vpx_codec_control (&gst_vpx_enc->encoder, VP9E_SET_TPL,
+            gst_vp9_enc->enable_tpl ? 1 : 0);
+        if (status != VPX_CODEC_OK) {
+          GST_WARNING_OBJECT (gst_vpx_enc,
+              "Failed to set VP9E_SET_TPL: %s", gst_vpx_error_name (status));
+        }
+      }
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -302,6 +342,12 @@ gst_vp9_enc_get_property (GObject * object, guint prop_id, GValue * value,
       break;
     case PROP_ROW_MT:
       g_value_set_boolean (value, gst_vp9_enc->row_mt);
+      break;
+    case PROP_AQ_MODE:
+      g_value_set_int (value, gst_vp9_enc->aq_mode);
+      break;
+    case PROP_ENABLE_TPL:
+      g_value_set_boolean (value, gst_vp9_enc->enable_tpl);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -422,6 +468,22 @@ gst_vp9_enc_configure_encoder (GstVPXEnc * encoder, GstVideoCodecState * state)
   if (status != VPX_CODEC_OK) {
     GST_DEBUG_OBJECT (encoder,
         "Failed to set VP9E_SET_ROW_MT: %s", gst_vpx_error_name (status));
+  }
+
+  status =
+      vpx_codec_control (&encoder->encoder, VP9E_SET_AQ_MODE,
+      vp9enc->aq_mode);
+  if (status != VPX_CODEC_OK) {
+    GST_WARNING_OBJECT (encoder,
+        "Failed to set VP9E_SET_AQ_MODE: %s", gst_vpx_error_name (status));
+  }
+
+  status =
+      vpx_codec_control (&encoder->encoder, VP9E_SET_TPL,
+      vp9enc->enable_tpl ? 1 : 0);
+  if (status != VPX_CODEC_OK) {
+    GST_WARNING_OBJECT (encoder,
+        "Failed to set VP9E_SET_TPL: %s", gst_vpx_error_name (status));
   }
 
   return TRUE;
