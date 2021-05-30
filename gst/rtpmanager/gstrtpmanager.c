@@ -34,8 +34,6 @@
 #include "gstrtpfunnel.h"
 #include "gstrtpst2022-1-fecdec.h"
 #include "gstrtpst2022-1-fecenc.h"
-#include "gstrtphdrext-twcc.h"
-#include "gstrtphdrext-rfc6464.h"
 
 static gboolean
 plugin_init (GstPlugin * plugin)
@@ -55,8 +53,6 @@ plugin_init (GstPlugin * plugin)
   ret |= GST_ELEMENT_REGISTER (rtpfunnel, plugin);
   ret |= GST_ELEMENT_REGISTER (rtpst2022_1_fecdec, plugin);
   ret |= GST_ELEMENT_REGISTER (rtpst2022_1_fecenc, plugin);
-  ret |= GST_ELEMENT_REGISTER (rtphdrexttwcc, plugin);
-  ret |= GST_ELEMENT_REGISTER (rtphdrextrfc6464, plugin);
 
   return ret;
 }

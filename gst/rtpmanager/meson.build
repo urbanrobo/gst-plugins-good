@@ -3,8 +3,6 @@ rtpmanager_sources = [
   'gstrtpbin.c',
   'gstrtpdtmfmux.c',
   'gstrtpjitterbuffer.c',
-  'gstrtphdrext-twcc.c',
-  'gstrtphdrext-rfc6464.c',
   'gstrtpmux.c',
   'gstrtpptdemux.c',
   'gstrtprtxqueue.c',
