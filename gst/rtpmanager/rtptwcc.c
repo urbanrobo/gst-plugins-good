@@ -861,6 +861,7 @@ rtp_twcc_manager_send_packet (RTPTWCCManager * twcc, RTPPacketInfo * pinfo)
   sent_packet_init (&packet, seqnum, pinfo);
   g_array_append_val (twcc->sent_packets, packet);
 
+  GST_ERROR("metrics:ts=%lu,type=rtp_send,twcc_seqnum=%u,rtp_seqnum=%u,bytes=%u,ssrc=%u", time(NULL), seqnum, pinfo->seqnum, pinfo->bytes, pinfo->ssrc, GST_TIME_AS_MSECONDS(pinfo->current_time));
   GST_LOG ("Send: twcc-seqnum: %u, pt: %u, marker: %d, ts: %" GST_TIME_FORMAT,
       seqnum, pinfo->pt, pinfo->marker, GST_TIME_ARGS (pinfo->running_time));
 }
@@ -1111,6 +1112,8 @@ rtp_twcc_manager_parse_fci (RTPTWCCManager * twcc,
             " size: %u", pkt->seqnum, GST_TIME_ARGS (pkt->local_ts), pkt->size);
       }
     }
+
+    GST_ERROR("metrics:ts=%lu,type=rtcp_twcc,twcc_seqnum=%u,delta_ts=%" G_GINT64_FORMAT, time(NULL), pkt->seqnum, GST_TIME_AS_MSECONDS(delta_ts));
   }
 
   _prune_sent_packets (twcc, twcc_packets);
