@@ -861,7 +861,8 @@ rtp_twcc_manager_send_packet (RTPTWCCManager * twcc, RTPPacketInfo * pinfo)
   sent_packet_init (&packet, seqnum, pinfo);
   g_array_append_val (twcc->sent_packets, packet);
 
-  GST_ERROR("metrics:ts=%lu,type=rtp_send,twcc_seqnum=%u,rtp_seqnum=%u,bytes=%u,ssrc=%u", time(NULL), seqnum, pinfo->seqnum, pinfo->bytes, pinfo->ssrc, GST_TIME_AS_MSECONDS(pinfo->current_time));
+  GST_ERROR("metrics:ts=%lu,type=rtp_send,twcc_seqnum=%u,rtp_seqnum=%u,rtp_ts=%u,bytes=%u,ssrc=%u", 
+      time(NULL), seqnum, pinfo->seqnum, pinfo->rtptime, pinfo->bytes, pinfo->ssrc, GST_TIME_AS_MSECONDS(pinfo->current_time));
   GST_LOG ("Send: twcc-seqnum: %u, pt: %u, marker: %d, ts: %" GST_TIME_FORMAT,
       seqnum, pinfo->pt, pinfo->marker, GST_TIME_ARGS (pinfo->running_time));
 }
