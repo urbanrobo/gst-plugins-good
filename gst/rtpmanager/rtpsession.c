@@ -2857,7 +2857,11 @@ rtp_session_process_nack (RTPSession * sess, guint32 sender_ssrc,
     blp = GST_READ_UINT16_BE (fci_data + 2);
 
     GST_DEBUG ("NACK #%u, blp %04x, SSRC 0x%08x", seqnum, blp, media_ssrc);
-    GST_ERROR("metrics:ts=%lu,type=rtcp_rtpfb_nack,rtp_seqnum=%u,ssrc=%u", time(NULL), seqnum, media_ssrc);
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    double ts = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+
+    GST_ERROR("metrics:ts=%f,type=rtcp_rtpfb_nack,rtp_seqnum=%u,ssrc=%u", ts, seqnum, media_ssrc);
 
     RTP_SESSION_UNLOCK (sess);
     sess->callbacks.notify_nack (sess, seqnum, blp, media_ssrc,
