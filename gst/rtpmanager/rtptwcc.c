@@ -866,7 +866,7 @@ rtp_twcc_manager_send_packet (RTPTWCCManager * twcc, RTPPacketInfo * pinfo)
   double ts = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
 
   GST_ERROR("metrics:ts=%f,type=rtp_send,twcc_seqnum=%u,rtp_seqnum=%u,rtp_ts=%u,bytes=%u,ssrc=%u", 
-      ts, seqnum, pinfo->seqnum, pinfo->rtptime, pinfo->bytes, pinfo->ssrc, GST_TIME_AS_MSECONDS(pinfo->current_time));
+      ts, seqnum, pinfo->seqnum, pinfo->rtptime, pinfo->bytes, pinfo->ssrc);
   GST_LOG ("Send: twcc-seqnum: %u, pt: %u, marker: %d, ts: %" GST_TIME_FORMAT,
       seqnum, pinfo->pt, pinfo->marker, GST_TIME_ARGS (pinfo->running_time));
 }
@@ -1072,7 +1072,7 @@ rtp_twcc_manager_parse_fci (RTPTWCCManager * twcc,
   for (i = 0; i < twcc_packets->len; i++) {
     RTPTWCCPacket *pkt = &g_array_index (twcc_packets, RTPTWCCPacket, i);
     gint16 delta = 0;
-    GstClockTimeDiff delta_ts;
+    GstClockTimeDiff delta_ts = 0;
 
     if (pkt->status == RTP_TWCC_PACKET_STATUS_SMALL_DELTA) {
       delta = fci_data[fci_parsed];
@@ -1121,7 +1121,8 @@ rtp_twcc_manager_parse_fci (RTPTWCCManager * twcc,
     struct timeval tv;
     gettimeofday(&tv, NULL);
     double ts = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
-    GST_ERROR("metrics:ts=%f,type=rtcp_twcc,twcc_seqnum=%u,delta_ts=%" G_GINT64_FORMAT, ts, pkt->seqnum, GST_TIME_AS_MSECONDS(delta_ts));
+    GST_ERROR("metrics:ts=%f,type=rtcp_twcc,twcc_seqnum=%u,remote_ts=%lu,delta_ts=%" G_GINT64_FORMAT ",received=%d", 
+        ts, pkt->seqnum, GST_TIME_AS_MSECONDS(pkt->remote_ts), GST_TIME_AS_MSECONDS(delta_ts), pkt->status != RTP_TWCC_PACKET_STATUS_NOT_RECV ? 1 : 0);
   }
 
   _prune_sent_packets (twcc, twcc_packets);
