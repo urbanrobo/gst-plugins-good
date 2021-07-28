@@ -508,6 +508,13 @@ gst_rtp_rtx_send_src_event (GstPad * pad, GstObject * parent, GstEvent * event)
             BufferQueueItem *item = g_sequence_get (iter);
             GST_LOG_OBJECT (rtx, "found %u", item->seqnum);
             rtx_buf = gst_rtp_rtx_buffer_new (rtx, item->buffer);
+
+            struct timeval tv;
+            gettimeofday(&tv, NULL);
+            double ts = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+
+            GST_ERROR_OBJECT (rtx, "metrics:ts=%f,type=rtx_send,seqnum=%u,osn=%u,bytes=%lu",
+                ts, item->seqnum, seqnum, gst_buffer_get_size(item->buffer));
           }
 #ifndef GST_DISABLE_DEBUG
           else {
