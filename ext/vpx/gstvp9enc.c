@@ -65,6 +65,7 @@
 #include "gstvpxelements.h"
 #include "gstvp8utils.h"
 #include "gstvp9enc.h"
+#include <assert.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_vp9enc_debug);
 #define GST_CAT_DEFAULT gst_vp9enc_debug
@@ -128,24 +129,26 @@ static gboolean gst_vp9_enc_configure_encoder (GstVPXEnc * encoder,
 
 #define DEFAULT_BITS_PER_PIXEL 0.0289
 
-static int set_roi_map(const vpx_codec_enc_cfg_t *cfg,
+static vpx_codec_err_t set_roi_map(const vpx_codec_enc_cfg_t *cfg,
                         vpx_codec_ctx_t *codec) {
   unsigned int i;
-  int rc = 0;
+  vpx_codec_err_t status = VPX_CODEC_OK;
   vpx_roi_map_t roi;
   memset(&roi, 0, sizeof(roi));
 
-  roi.rows = (cfg->g_h + 15) / 16;
-  roi.cols = (cfg->g_w + 15) / 16;
+  roi.enabled = 1;
 
-  roi.delta_q[0] = 0;
-  roi.delta_q[1] = -20;
+  roi.rows = (cfg->g_h + 7) / 8;
+  roi.cols = (cfg->g_w + 7) / 8;
+
+  roi.delta_q[0] = 30;
+  roi.delta_q[1] = -30;
 
   roi.delta_lf[0] = 0;
-  roi.delta_lf[1] = 0;
+  roi.delta_lf[1] = 1;
 
-  roi.static_threshold[0] = 1000;
-  roi.static_threshold[1] = 1000;
+  memset(roi.ref_frame, -1, sizeof(roi.ref_frame));
+  roi.ref_frame[1] = 1;
 
   roi.roi_map = (uint8_t *)malloc(roi.rows * roi.cols);
 
@@ -153,6 +156,8 @@ static int set_roi_map(const vpx_codec_enc_cfg_t *cfg,
   unsigned int col_end = 5 * roi.cols / 8;
   unsigned int row_start = 0;
   unsigned int row_end = roi.rows / 2;
+  printf("VP9ENC: col_start=%u,col_end=%u,row_start=%u,row_end=%u\n",
+          col_start, col_end, row_start, row_end);
 
   for (i = 0; i < roi.rows * roi.cols; ++i) {
     unsigned int col = i % roi.cols;
@@ -167,12 +172,10 @@ static int set_roi_map(const vpx_codec_enc_cfg_t *cfg,
     roi.roi_map[i] = map;
   }
 
-  if (vpx_codec_control(codec, VP9E_SET_ROI_MAP, &roi)) {
-    rc = -1;
-  }
-
+  status = vpx_codec_control(codec, VP9E_SET_ROI_MAP, &roi);
+  assert(status == VPX_CODEC_OK);
   free(roi.roi_map);
-  return rc;
+  return status;
 }
 
 static void
@@ -533,11 +536,11 @@ gst_vp9_enc_configure_encoder (GstVPXEnc * encoder, GstVideoCodecState * state)
         "Failed to set VP9E_SET_TPL: %s", gst_vpx_error_name (status));
   }
 
-  status = set_roi_map(&encoder->cfg, &encoder->encoder);
-  if (status != VPX_CODEC_OK) {
-    GST_WARNING_OBJECT (encoder,
-        "Failed to set ROI map: %s", gst_vpx_error_name (status));
-  }
+  // status = set_roi_map(&encoder->cfg, &encoder->encoder);
+  // if (status != VPX_CODEC_OK) {
+  //   GST_WARNING_OBJECT (encoder,
+  //       "Failed to set ROI map: %s", gst_vpx_error_name (status));
+  // }
 
   return TRUE;
 }
