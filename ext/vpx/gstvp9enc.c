@@ -129,6 +129,33 @@ static gboolean gst_vp9_enc_configure_encoder (GstVPXEnc * encoder,
 
 #define DEFAULT_BITS_PER_PIXEL 0.0289
 
+static int roi_front(unsigned int row, unsigned int col) {
+  unsigned int off_y = 190;
+  unsigned int off_x = 917;
+  unsigned int height = 260;
+  unsigned int width = 726;
+
+  return row >= off_y && row <= off_y + height && col >= off_x && col <= off_x + width;
+}
+
+static int roi_rear_left(unsigned int row, unsigned int col) {
+  unsigned int off_y = 521;
+  unsigned int off_x = 788;
+  unsigned int height = 199;
+  unsigned int width = 267;
+
+  return row >= off_y && row <= off_y + height && col >= off_x && col <= off_x + width;
+}
+
+static int roi_rear_right(unsigned int row, unsigned int col) {
+  unsigned int off_y = 521;
+  unsigned int off_x = 1502;
+  unsigned int height = 199;
+  unsigned int width = 267;
+
+  return row >= off_y && row <= off_y + height && col >= off_x && col <= off_x + width;
+}
+
 static vpx_codec_err_t set_roi_map(const vpx_codec_enc_cfg_t *cfg,
                         vpx_codec_ctx_t *codec) {
   unsigned int i;
@@ -141,32 +168,36 @@ static vpx_codec_err_t set_roi_map(const vpx_codec_enc_cfg_t *cfg,
   roi.rows = (cfg->g_h + 7) / 8;
   roi.cols = (cfg->g_w + 7) / 8;
 
-  roi.delta_q[0] = 30;
-  roi.delta_q[1] = -30;
-
-  roi.delta_lf[0] = 0;
+  roi.delta_q[0] = 20;
+  roi.delta_q[1] = -20;
+  roi.delta_q[2] = -10;
   roi.delta_lf[1] = 1;
+  roi.delta_lf[2] = 1;
 
   memset(roi.ref_frame, -1, sizeof(roi.ref_frame));
   roi.ref_frame[1] = 1;
+  roi.ref_frame[2] = 1;
 
   roi.roi_map = (uint8_t *)malloc(roi.rows * roi.cols);
 
   unsigned int col_start = 3 * roi.cols / 8;
   unsigned int col_end = 5 * roi.cols / 8;
-  unsigned int row_start = 0;
-  unsigned int row_end = roi.rows / 2;
+  unsigned int row_start = 200 * roi.rows / 720;
+  unsigned int row_end = 600 * roi.rows / 720;
   printf("VP9ENC: col_start=%u,col_end=%u,row_start=%u,row_end=%u\n",
           col_start, col_end, row_start, row_end);
 
   for (i = 0; i < roi.rows * roi.cols; ++i) {
-    unsigned int col = i % roi.cols;
-    unsigned int row = i / roi.cols;
+    unsigned int col = (i % roi.cols) * 8;
+    unsigned int row = (i / roi.cols) * 8;
     unsigned int map = 0;
     
-    if (row_start <= row && row <= row_end && \
-        col_start <= col && col <= col_end) {
+    if (roi_front(row, col)) {
       map = 1;
+    } else if (roi_rear_left(row, col) || roi_rear_right(row, col)) {
+      map = 2;
+    } else {
+      map = 0;
     }
 
     roi.roi_map[i] = map;
@@ -536,11 +567,11 @@ gst_vp9_enc_configure_encoder (GstVPXEnc * encoder, GstVideoCodecState * state)
         "Failed to set VP9E_SET_TPL: %s", gst_vpx_error_name (status));
   }
 
-  // status = set_roi_map(&encoder->cfg, &encoder->encoder);
-  // if (status != VPX_CODEC_OK) {
-  //   GST_WARNING_OBJECT (encoder,
-  //       "Failed to set ROI map: %s", gst_vpx_error_name (status));
-  // }
+  status = set_roi_map(&encoder->cfg, &encoder->encoder);
+  if (status != VPX_CODEC_OK) {
+    GST_WARNING_OBJECT (encoder,
+        "Failed to set ROI map: %s", gst_vpx_error_name (status));
+  }
 
   return TRUE;
 }
